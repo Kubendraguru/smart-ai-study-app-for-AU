@@ -1,9 +1,10 @@
 import { useNavigate } from 'react-router';
 import { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { Bell, Settings, Flame, TrendingUp, BookOpen, ChevronRight, Award, Zap } from 'lucide-react';
+import { Bell, Settings, Flame, TrendingUp, BookOpen, ChevronRight, Award, Zap, User as UserIcon } from 'lucide-react';
 import { useApp } from './AppContext';
 import { fetchGpaRecords, type GPARecord } from '../../lib/gpa';
+import { saveProfile } from '../../lib/auth';
 
 const SUBJECT_COLORS: Record<string, string> = {
   'from-violet-500 to-purple-700': 'bg-gradient-to-br from-violet-500 to-purple-700',
@@ -42,6 +43,61 @@ export function HomePage() {
     if (h < 17) return 'Good afternoon';
     return 'Good evening';
   };
+
+  const [setupName, setSetupName] = useState('');
+  const [setupError, setSetupError] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
+
+  const handleProfileSetup = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!setupName.trim()) {
+      setSetupError('Name is required.');
+      return;
+    }
+    setIsSaving(true);
+    setSetupError('');
+    try {
+      await saveProfile(setupName);
+      // Wait a bit, then reload window to fetch the new profile from AppContext
+      window.location.reload(); 
+    } catch (err: any) {
+      setSetupError(err.message || 'Failed to save profile');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  if (!user && session) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-6 bg-[#08081A]">
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-sm bg-white/5 border border-white/10 rounded-[24px] p-6 text-center">
+          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-violet-500 to-purple-700 flex items-center justify-center shadow-lg shadow-violet-500/30 mx-auto mb-4">
+            <UserIcon className="w-8 h-8 text-white" />
+          </div>
+          <h2 className="text-xl font-bold text-white mb-2">Complete Your Profile</h2>
+          <p className="text-white/50 text-sm mb-6">Let's get your dashboard ready.</p>
+          
+          <form onSubmit={handleProfileSetup} className="space-y-4">
+            <input 
+              type="text" 
+              placeholder="Your Full Name" 
+              value={setupName}
+              onChange={e => setSetupName(e.target.value)}
+              className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-white placeholder-white/30 text-sm focus:outline-none focus:border-violet-500/60"
+            />
+            {setupError && <p className="text-red-400 text-xs">{setupError}</p>}
+            <button 
+              disabled={isSaving}
+              type="submit" 
+              className="w-full bg-violet-600 text-white py-3 rounded-2xl font-bold text-sm"
+            >
+              {isSaving ? 'Saving...' : 'Save Student Data'}
+            </button>
+          </form>
+        </motion.div>
+      </div>
+    );
+  }
 
   return (
     <div className="pb-28 min-h-screen" style={{ background: 'linear-gradient(135deg, #08081A 0%, #0D0820 50%, #08081A 100%)' }}>

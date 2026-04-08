@@ -21,8 +21,7 @@ export function AuthPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [form, setForm] = useState({
-    name: '', email: '', password: '',
-    department: 'CSE', year: '2', semester: '3', rollNo: '',
+    email: '', password: ''
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -39,19 +38,9 @@ export function AuthPage() {
         await signIn(form.email, form.password);
         navigate('/home', { replace: true });
       } else {
-        if (!form.name) { setError('Full name is required.'); setLoading(false); return; }
-        const dept = DEPARTMENTS.find(d => d.code === form.department) || DEPARTMENTS[0];
-        await signUp(form.email, form.password, role, {
-          name: form.name,
-          ...(role === 'student' ? {
-            department: dept.name,
-            department_code: dept.code,
-            roll_no: form.rollNo || '',
-            year: parseInt(form.year) || 2,
-            semester: parseInt(form.semester) || 3,
-          } : {}),
-        });
-        navigate('/home', { replace: true });
+        await signUp(form.email, form.password);
+        setError('Signup successful! Please check your email and then log in.');
+        setTab('login');
       }
     } catch (err: any) {
       const msg = err?.message || 'Something went wrong. Please try again.';
@@ -133,19 +122,6 @@ export function AuthPage() {
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-4">
-          {tab === 'signup' && (
-            <div className="relative">
-              <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
-              <input
-                type="text"
-                placeholder={role === 'teacher' ? 'Full Name (e.g. Dr. A. Kumar)' : 'Full Name'}
-                value={form.name}
-                onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
-                className="w-full bg-white/5 border border-white/10 rounded-2xl px-11 py-3.5 text-white placeholder-white/30 text-sm focus:outline-none focus:border-violet-500/60 focus:bg-white/8 transition-all"
-              />
-            </div>
-          )}
-
           <div className="relative">
             <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
             <input
@@ -170,46 +146,6 @@ export function AuthPage() {
               {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
             </button>
           </div>
-
-          {tab === 'signup' && role === 'student' && (
-            <>
-              <select
-                value={form.department}
-                onChange={e => setForm(f => ({ ...f, department: e.target.value }))}
-                className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3.5 text-white text-sm focus:outline-none focus:border-violet-500/60 transition-all appearance-none"
-              >
-                {DEPARTMENTS.map(d => (
-                  <option key={d.code} value={d.code} className="bg-[#1a1a2e] text-white">{d.name} ({d.code})</option>
-                ))}
-              </select>
-              <div className="grid grid-cols-2 gap-3">
-                <select
-                  value={form.year}
-                  onChange={e => setForm(f => ({ ...f, year: e.target.value }))}
-                  className="bg-white/5 border border-white/10 rounded-2xl px-4 py-3.5 text-white text-sm focus:outline-none focus:border-violet-500/60 transition-all appearance-none"
-                >
-                  {[1,2,3,4].map(y => <option key={y} value={y} className="bg-[#1a1a2e]">Year {y}</option>)}
-                </select>
-                <select
-                  value={form.semester}
-                  onChange={e => setForm(f => ({ ...f, semester: e.target.value }))}
-                  className="bg-white/5 border border-white/10 rounded-2xl px-4 py-3.5 text-white text-sm focus:outline-none focus:border-violet-500/60 transition-all appearance-none"
-                >
-                  {[1,2,3,4,5,6,7,8].map(s => <option key={s} value={s} className="bg-[#1a1a2e]">Sem {s}</option>)}
-                </select>
-              </div>
-              <div className="relative">
-                <BookOpen className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
-                <input
-                  type="text"
-                  placeholder="Roll Number (e.g. 211CS043)"
-                  value={form.rollNo}
-                  onChange={e => setForm(f => ({ ...f, rollNo: e.target.value }))}
-                  className="w-full bg-white/5 border border-white/10 rounded-2xl px-11 py-3.5 text-white placeholder-white/30 text-sm focus:outline-none focus:border-violet-500/60 transition-all"
-                />
-              </div>
-            </>
-          )}
 
           <motion.button
             type="submit"

@@ -22,50 +22,54 @@ export interface TeacherProfile {
   role: 'teacher';
 }
 
-/** Sign up a new user and insert their profile into the correct table */
-export async function signUp(
-  email: string,
-  password: string,
-  role: 'student' | 'teacher',
-  profileData: Omit<StudentProfile | TeacherProfile, 'auth_id' | 'email' | 'role'>
-) {
+/** Sign up a new user */
+export async function signUp(email: string, password: string) {
   const { data: authData, error: authError } = await supabase.auth.signUp({ email, password });
   if (authError) throw authError;
   if (!authData.user) throw new Error('Signup failed: no user returned');
 
-  if (role === 'student') {
-    const sp = profileData as Omit<StudentProfile, 'auth_id' | 'email' | 'role'>;
-    const { error } = await supabase.from('students').insert({
-      auth_id: authData.user.id,
-      name: sp.name,
-      email,
-      department: sp.department,
-      department_code: sp.department_code,
-      roll_no: sp.roll_no,
-      year: sp.year,
-      semester: sp.semester,
-      role: 'student',
-    });
-    if (error) throw error;
-  } else {
-    // Teachers: insert into lowercase teachers table with auth_id via students columns workaround
-    // We store teacher in students table with role='teacher' for simplicity & auth_id linkage
-    const tp = profileData as Omit<TeacherProfile, 'auth_id' | 'email' | 'role'>;
-    const { error } = await supabase.from('students').insert({
-      auth_id: authData.user.id,
-      name: tp.name,
-      email,
-      department: 'Faculty',
-      department_code: 'FAC',
-      roll_no: '',
-      year: 0,
-      semester: 0,
-      role: 'teacher',
-    });
-    if (error) throw error;
+  // DO NOT insert into the database during signup
+  return authData;
+}
+
+/** Save or update the student profile */
+export async function saveProfile(name: string, extraData?: any) {
+  const { data: { user }, error: authError } = await supabase.auth.getUser();
+  if (authError || !user) throw new Error('User not logged in');
+
+  const uid = user.id;
+  if (!uid) throw new Error('UID is null');
+
+  // Check if student already exists using auth_id
+  const { data: existingUser, error: fetchError } = await supabase
+    .from('students')
+    .select('auth_id')
+    .eq('auth_id', uid)
+    .single();
+
+  if (fetchError && fetchError.code !== 'PGRST116') {
+    throw fetchError; // Ignore row not found error (PGRST116)
   }
 
-  return authData;
+  if (!existingUser) {
+    // If not exists -> insert new row
+    const { error: insertError } = await supabase.from('students').insert({
+      auth_id: uid,
+      name,
+      role: 'student',
+      department: extraData?.department || 'N/A',
+      department_code: extraData?.department_code || 'N/A',
+      roll_no: extraData?.roll_no || 'N/A',
+      year: extraData?.year || 1,
+      semester: extraData?.semester || 1,
+    });
+
+    if (insertError) throw insertError;
+  } else {
+    throw new Error('Profile already exists. Duplicate entry not allowed for insertions.');
+  }
+
+  return uid;
 }
 
 /** Sign in existing user and fetch their profile */
@@ -90,13 +94,13 @@ export async function getSession() {
 
 /** Fetch the profile for the current logged-in user */
 export async function getCurrentProfile(): Promise<(StudentProfile | TeacherProfile) | null> {
-  const session = await getSession();
-  if (!session) return null;
+  const { data: { user }, error: userError } = await supabase.auth.getUser();
+  if (userError || !user) return null;
 
   const { data, error } = await supabase
     .from('students')
     .select('*')
-    .eq('auth_id', session.user.id)
+    .eq('auth_id', user.id)
     .single();
 
   if (error || !data) return null;
