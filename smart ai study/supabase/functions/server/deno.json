@@ -1,0 +1,9 @@
+{
+  "nodeModulesDir": "auto",
+  "imports": {
+    "npm:hono@4.3.11": "npm:hono@4.3.11",
+    "npm:hono@4.3.11/cors": "npm:hono@4.3.11/cors",
+    "npm:hono@4.3.11/logger": "npm:hono@4.3.11/logger",
+    "jsr:@supabase/supabase-js@2.49.8": "jsr:@supabase/supabase-js@2.49.8"
+  }
+}
